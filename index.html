@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Currency Converter</title>
+  <meta name="description" content="Real-time currency conversion tool with historical data visualization">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              light: '#3b82f6',
+              dark: '#60a5fa'
+            },
+            secondary: {
+              light: '#10b981',
+              dark: '#34d399'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+    .dropdown-enter-active, .dropdown-leave-active {
+      transition: all 0.3s ease;
+    }
+    .dropdown-enter-from, .dropdown-leave-to {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    #load-spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
+  <!-- Hero Section -->
+  <header class="relative overflow-hidden">
+    <div class="bg-gradient-to-r from-primary-light to-secondary-light dark:from-primary-dark dark:to-secondary-dark h-64 w-full flex items-center justify-center">
+      <div class="text-center px-4 z-10">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">Global Currency Converter</h1>
+        <p class="text-xl text-white opacity-90">Real-time exchange rates & historical data for 160+ currencies</p>
+      </div>
+      <div class="absolute inset-0 bg-black opacity-20"></div>
+      <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/6d17c60f-aa76-437b-a7ee-efcf003554a8.png" alt="Global financial markets with currency symbols floating over a world map" class="absolute inset-0 w-full h-full object-cover" />
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- Theme Toggle -->
+    <div class="flex justify-end mb-6">
+      <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+        <i class="fas fa-moon dark:hidden"></i>
+        <i class="fas fa-sun hidden dark:block"></i>
+        <span class="sr-only">Toggle Dark Mode</span>
+      </button>
+    </div>
+
+    <!-- Converter Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 transition-all hover:shadow-xl">
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+        <i class="fas fa-exchange-alt text-primary-light dark:text-primary-dark"></i>
+        Currency Converter
+      </h2>
+      
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <!-- Input Section -->
+        <div class="space-y-4">
+          <div>
+            <label for="amount" class="block text-sm font-medium mb-1">Amount</label>
+            <div class="relative">
+              <input type="number" id="amount" value="100" min="0" step="0.01" 
+                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent">
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <span class="text-gray-500 dark:text-gray-400">USD</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="from-currency" class="block text-sm font-medium mb-1">From</label>
+            <select id="from-currency" 
+                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent">
+              <option value="USD">United States Dollar (USD)</option>
+              <option value="EUR">Euro (EUR)</option>
+              <option value="GBP">British Pound (GBP)</option>
+              <option value="JPY">Japanese Yen (JPY)</option>
+              <option value="AUD">Australian Dollar (AUD)</option>
+              <option value="CAD">Canadian Dollar (CAD)</option>
+              <option value="CHF">Swiss Franc (CHF)</option>
+              <option value="CNY">Chinese Yuan (CNY)</option>
+              <option value="INR">Indian Rupee (INR)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Output Section -->
+        <div class="space-y-4">
+          <div>
+            <label for="converted-amount" class="block text-sm font-medium mb-1">Converted Amount</label>
+            <div class="relative">
+              <input type="number" id="converted-amount" readonly 
+                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none">
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <span class="text-gray-500 dark:text-gray-400">EUR</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="to-currency" class="block text-sm font-medium mb-1">To</label>
+            <select id="to-currency" 
+                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark focus:border-transparent">
+              <option value="EUR">Euro (EUR)</option>
+              <option value="USD">United States Dollar (USD)</option>
+              <option value="GBP">British Pound (GBP)</option>
+              <option value="JPY">Japanese Yen (JPY)</option>
+              <option value="AUD">Australian Dollar (AUD)</option>
+              <option value="CAD">Canadian Dollar (CAD)</option>
+              <option value="CHF">Swiss Franc (CHF)</option>
+              <option value="CNY">Chinese Yuan (CNY)</option>
+              <option value="INR">Indian Rupee (INR)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button id="convert-btn" class="flex-1 bg-primary-light dark:bg-primary-dark hover:bg-primary-light/90 dark:hover:bg-primary-dark/90 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+          <span id="convert-text">Convert</span>
+          <i id="load-spinner" class="fas fa-sync-alt hidden"></i>
+        </button>
+        <button id="switch-currencies" class="flex items-center justify-center p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <i class="fas fa-exchange-alt"></i>
+          <span class="sr-only">Switch Currencies</span>
+        </button>
+      </div>
+
+      <!-- Rate Info -->
+      <div id="rate-info" class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hidden">
+        <p class="text-sm">
+          <span id="base-amount">1</span> <span id="base-currency">USD</span> = 
+          <span id="target-amount">0.92</span> <span id="target-currency">EUR</span>
+          <span class="text-gray-500 dark:text-gray-400 text-xs ml-2">(Last updated: <span id="last-updated">Just now</span>)</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Historical Data Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 transition-all hover:shadow-xl">
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+        <i class="fas fa-chart-line text-primary-light dark:text-primary-dark"></i>
+        Historical Exchange Rates
+      </h2>
+      
+      <div class="mb-4 flex flex-wrap gap-2">
+        <button data-days="7" class="historical-btn active px-4 py-2 rounded-lg bg-primary-light dark:bg-primary-dark text-white">7 Days</button>
+        <button data-days="30" class="historical-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">30 Days</button>
+        <button data-days="90" class="historical-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">90 Days</button>
+        <button data-days="180" class="historical-btn px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">6 Months</button>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="historical-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Popular Conversions -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-all hover:shadow-xl">
+      <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+        <i class="fas fa-star text-primary-light dark:text-primary-dark"></i>
+        Popular Currency Pairs
+      </h2>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div class="popular-pair p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" data-from="USD" data-to="EUR">
+          <div class="flex justify-between mb-1">
+            <span class="font-medium">USD → EUR</span>
+            <span class="text-primary-light dark:text-primary-dark">0.92</span>
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">US Dollar to Euro</div>
+        </div>
+        <div class="popular-pair p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" data-from="EUR" data-to="USD">
+          <div class="flex justify-between mb-1">
+            <span class="font-medium">EUR → USD</span>
+            <span class="text-primary-light dark:text-primary-dark">1.09</span>
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">Euro to US Dollar</div>
+        </div>
+        <div class="popular-pair p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" data-from="GBP" data-to="USD">
+          <div class="flex justify-between mb-1">
+            <span class="font-medium">GBP → USD</span>
+            <span class="text-primary-light dark:text-primary-dark">1.27</span>
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">British Pound to US Dollar</div>
+        </div>
+        <div class="popular-pair p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors" data-from="USD" data-to="JPY">
+          <div class="flex justify-between mb-1">
+            <span class="font-medium">USD → JPY</span>
+            <span class="text-primary-light dark:text-primary-dark">147.45</span>
+          </div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">US Dollar to Yen</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-gray-100 dark:bg-gray-800 py-8">
+    <div class="container mx-auto px-4 max-w-6xl">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0">
+          <h3 class="text-xl font-bold mb-2">Global Currency Converter</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Real-time exchange rates for 160+ currencies</p>
+        </div>
+        <div class="flex gap-4">
+          <a href="#" class="text-gray-700 dark:text-gray-300 hover:text-primary-light dark:hover:text-primary-dark transition-colors">
+            <i class="fab fa-github"></i>
+            <span class="sr-only">GitHub</span>
+          </a>
+          <a href="#" class="text-gray-700 dark:text-gray-300 hover:text-primary-light dark:hover:text-primary-dark transition-colors">
+            <i class="fab fa-twitter"></i>
+            <span class="sr-only">Twitter</span>
+          </a>
+        </div>
+      </div>
+      <div class="border-t border-gray-200 dark:border-gray-700 mt-6 pt-6 text-sm text-gray-500 dark:text-gray-400 text-center">
+        <p>Exchange rates are provided by ExchangeRate-API (free tier). Rates are for informational purposes only.</p>
+        <p class="mt-2">© 2025 [ARYANxSWARIT]. All characters and elements are trademarks of [AxS]. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // DOM Elements
+    const amountInput = document.getElementById('amount');
+    const fromCurrency = document.getElementById('from-currency');
+    const toCurrency = document.getElementById('to-currency');
+    const convertedAmount = document.getElementById('converted-amount');
+    const convertBtn = document.getElementById('convert-btn');
+    const switchBtn = document.getElementById('switch-currencies');
+    const rateInfo = document.getElementById('rate-info');
+    const loadSpinner = document.getElementById('load-spinner');
+    const convertText = document.getElementById('convert-text');
+    const historicalBtns = document.querySelectorAll('.historical-btn');
+    const popularPairs = document.querySelectorAll('.popular-pair');
+    const themeToggle = document.getElementById('theme-toggle');
+    const historicalChartCtx = document.getElementById('historical-chart').getContext('2d');
+    
+    // Chart instance
+    let historicalChart = null;
+    let baseCurrency = 'USD';
+    let targetCurrency = 'EUR';
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check for saved theme preference
+      if (localStorage.getItem('color-theme') === 'dark' || 
+          (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      
+      // Load saved currencies if available
+      const savedFromCurrency = localStorage.getItem('fromCurrency');
+      const savedToCurrency = localStorage.getItem('toCurrency');
+      
+      if (savedFromCurrency) {
+        fromCurrency.value = savedFromCurrency;
+        baseCurrency = savedFromCurrency;
+      }
+      
+      if (savedToCurrency) {
+        toCurrency.value = savedToCurrency;
+        targetCurrency = savedToCurrency;
+        document.querySelectorAll('.converted-currency').forEach(el => {
+          el.textContent = savedToCurrency;
+        });
+      }
+      
+      // Convert on page load
+      convertCurrency();
+      loadHistoricalData(7);
+    });
+    
+    // Event Listeners
+    convertBtn.addEventListener('click', convertCurrency);
+    switchBtn.addEventListener('click', switchCurrencies);
+    amountInput.addEventListener('input', debounce(convertCurrency, 300));
+    fromCurrency.addEventListener('change', () => {
+      baseCurrency = fromCurrency.value;
+      localStorage.setItem('fromCurrency', baseCurrency);
+      convertCurrency();
+      loadHistoricalData(7);
+    });
+    toCurrency.addEventListener('change', () => {
+      targetCurrency = toCurrency.value;
+      localStorage.setItem('toCurrency', targetCurrency);
+      convertCurrency();
+      loadHistoricalData(7);
+    });
+    
+    historicalBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        historicalBtns.forEach(b => b.classList.remove('active', 'bg-primary-light', 'dark:bg-primary-dark', 'text-white'));
+        btn.classList.add('active', 'bg-primary-light', 'dark:bg-primary-dark', 'text-white');
+        const days = parseInt(btn.dataset.days);
+        loadHistoricalData(days);
+      });
+    });
+    
+    popularPairs.forEach(pair => {
+      pair.addEventListener('click', () => {
+        fromCurrency.value = pair.dataset.from;
+        toCurrency.value = pair.dataset.to;
+        baseCurrency = pair.dataset.from;
+        targetCurrency = pair.dataset.to;
+        localStorage.setItem('fromCurrency', baseCurrency);
+        localStorage.setItem('toCurrency', targetCurrency);
+        convertCurrency();
+        loadHistoricalData(7);
+        
+        // Update active button
+        document.querySelector('.historical-btn.active').click();
+      });
+    });
+    
+    // Dark/Light mode toggle
+    themeToggle.addEventListener('click', toggleTheme);
+    
+    // Functions
+    async function convertCurrency() {
+      const amount = parseFloat(amountInput.value);
+      if (isNaN(amount) || amount <= 0) {
+        convertedAmount.value = '';
+        rateInfo.classList.add('hidden');
+        return;
+      }
+      
+      // Show loading
+      convertText.textContent = 'Converting...';
+      loadSpinner.classList.remove('hidden');
+      convertBtn.disabled = true;
+      
+      try {
+        // In a real app, you would use a real API here
+        // For demo purposes, we'll simulate API response
+        const fakeRate = getFakeExchangeRate(baseCurrency, targetCurrency);
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        const result = amount * fakeRate;
+        convertedAmount.value = result.toFixed(4);
+        
+        // Update rate info
+        document.getElementById('base-amount').textContent = '1';
+        document.getElementById('base-currency').textContent = baseCurrency;
+        document.getElementById('target-amount').textContent = fakeRate.toFixed(4);
+        document.getElementById('target-currency').textContent = targetCurrency;
+        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+        rateInfo.classList.remove('hidden');
+        
+        // Update popular pairs
+        updatePopularPairs(baseCurrency, fakeRate);
+      } catch (error) {
+        console.error('Conversion error:', error);
+        convertedAmount.value = 'Error';
+      } finally {
+        // Hide loading
+        convertText.textContent = 'Convert';
+        loadSpinner.classList.add('hidden');
+        convertBtn.disabled = false;
+      }
+    }
+    
+    function getFakeExchangeRate(from, to) {
+      // Fake exchange rates for demo purposes
+      // In a real app, you would get these from an API
+      const rates = {
+        USD: {  // 1 USD to ...
+          EUR: 0.92,
+          GBP: 0.79,
+          JPY: 147.45,
+          AUD: 1.51,
+          CAD: 1.35,
+          CHF: 0.88,
+          CNY: 7.18,
+          INR: 83.12
+        },
+        EUR: {  // 1 EUR to ...
+          USD: 1.09,
+          GBP: 0.86,
+          JPY: 160.32,
+          AUD: 1.64,
+          CAD: 1.47,
+          CHF: 0.96,
+          CNY: 7.81,
+          INR: 90.37
+        },
+        GBP: {  // 1 GBP to ...
+          USD: 1.27,
+          EUR: 1.16,
+          JPY: 186.73,
+          AUD: 1.91,
+          CAD: 1.71,
+          CHF: 1.11,
+          CNY: 9.07,
+          INR: 105.01
+        }
+      };
+      
+      // If we have a direct rate, return it
+      if (rates[from] && rates[from][to]) {
+        return rates[from][to];
+      }
+      
+      // Else if we have the inverse (to → from), return the inverse
+      if (rates[to] && rates[to][from]) {
+        return 1 / rates[to][from];
+      }
+      
+      // Default fallback
+      return 1;
+    }
+    
+    function updatePopularPairs(base, rate) {
+      popularPairs.forEach(pair => {
+        if (pair.dataset.from === base && pair.dataset.to === targetCurrency) {
+          const rateSpan = pair.querySelector('span.text-primary-light');
+          rateSpan.textContent = rate.toFixed(4);
+        }
+      });
+    }
+    
+    async function loadHistoricalData(days) {
+      // In a real app, you would fetch historical data from an API
+      // For demo, we'll generate fake historical data
+      const now = new Date();
+      const labels = [];
+      const data = [];
+      const baseRate = getFakeExchangeRate(baseCurrency, targetCurrency);
+      
+      for (let i = days; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(now.getDate() - i);
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        
+        // Add some random fluctuation to the base rate
+        const fluctuation = (Math.random() * 0.04) - 0.02; // +/- 2%
+        data.push(baseRate * (1 + fluctuation));
+      }
+      
+      if (historicalChart) {
+        historicalChart.destroy();
+      }
+      
+      historicalChart = new Chart(historicalChartCtx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `${baseCurrency} to ${targetCurrency} Exchange Rate`,
+            data: data,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 3,
+            pointBackgroundColor: '#3b82f6',
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                color: '#6b7280'
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              displayColors: true
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(229, 231, 235, 0.5)'
+              },
+              ticks: {
+                color: '#6b7280'
+              }
+            },
+            y: {
+              grid: {
+                color: 'rgba(229, 231, 235, 0.5)'
+              },
+              ticks: {
+                color: '#6b7280',
+                callback: function(value) {
+                  return value.toFixed(4);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    function switchCurrencies() {
+      const temp = fromCurrency.value;
+      fromCurrency.value = toCurrency.value;
+      toCurrency.value = temp;
+      
+      baseCurrency = fromCurrency.value;
+      targetCurrency = toCurrency.value;
+      localStorage.setItem('fromCurrency', baseCurrency);
+      localStorage.setItem('toCurrency', targetCurrency);
+      
+      convertCurrency();
+      loadHistoricalData(7);
+      
+      // Update active historical period
+      const activePeriod = document.querySelector('.historical-btn.active').dataset.days;
+      loadHistoricalData(parseInt(activePeriod));
+    }
+    
+    function toggleTheme() {
+      if (localStorage.getItem('color-theme') === 'light' || 
+          (!('color-theme' in localStorage) && !window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('color-theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('color-theme', 'light');
+      }
+    }
+    
+    function debounce(func, wait) {
+      let timeout;
+      return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          func.apply(context, args);
+        }, wait);
+      };
+    }
+  </script>
+</body>
+</html>
+
